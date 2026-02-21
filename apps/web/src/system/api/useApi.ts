@@ -31,7 +31,21 @@ export function useApiMutation<TData, TVariables = void>(
 
   return useMutation<TData, AxiosError<ApiError>, TVariables>({
     mutationFn: async (variables) => {
-      const response = await apiClient[method]<{ data: TData }>(url, variables);
+      let finalUrl = url;
+      let data = variables;
+
+      if (variables && typeof variables === 'object') {
+        const vars = variables as Record<string, any>;
+        for (const [key, value] of Object.entries(vars)) {
+          if (finalUrl.includes(`{${key}}`)) {
+            finalUrl = finalUrl.replace(`{${key}}`, String(value));
+            data = { ...vars };
+            delete (data as Record<string, any>)[key];
+          }
+        }
+      }
+
+      const response = await apiClient[method]<{ data: TData }>(finalUrl, data);
       return response.data.data;
     },
     ...options,

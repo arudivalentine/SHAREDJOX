@@ -42,7 +42,7 @@ export function useGetDiscoveryFeed(cursor?: string) {
 }
 
 export function useClaimJob() {
-  return useApiMutation<JobDTO, { jobId: number }>(
+  return useApiMutation<{ data: JobDTO }, { jobId: number }>(
     '/api/jobs/{jobId}/claim',
     'post'
   );

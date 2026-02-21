@@ -14,6 +14,7 @@
     "resolveJsonModule": true,
     "moduleResolution": "bundler",
     "baseUrl": ".",
+    "jsx": "react-jsx",
     "paths": {
       "@/*": ["src/*"]
     }

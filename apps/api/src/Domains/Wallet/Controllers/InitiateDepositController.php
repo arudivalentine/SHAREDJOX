@@ -16,22 +16,24 @@ class InitiateDepositController
         $this->authorize('deposit', $user->wallet);
 
         $validated = $request->validate([
-            'amount' => 'required|numeric|min:0.01',
-            'reference' => 'required|string|max:255',
-            'metadata' => 'nullable|array',
+            'amount' => 'required|numeric|min:10|max:10000',
         ]);
 
         $wallet = $repository->findOrCreateByUser($user);
 
-        $transaction = (new DepositAction())->execute(
+        $result = (new DepositAction())->execute(
             $wallet,
             (float) $validated['amount'],
-            $validated['reference'],
-            $validated['metadata'] ?? []
+            'stripe_checkout_' . uniqid(),
+            []
         );
 
         return response()->json([
-            'data' => TransactionDTO::fromModel($transaction),
+            'data' => [
+                'checkoutUrl' => $result['checkoutUrl'],
+                'sessionId' => $result['sessionId'],
+                'transaction' => TransactionDTO::fromModel($result['transaction']),
+            ],
         ], 201);
     }
 }

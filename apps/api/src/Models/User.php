@@ -18,10 +18,15 @@ class User extends Authenticatable
         'password',
         'name',
         'stripe_account_id',
+        'work_graph',
     ];
 
     protected $hidden = [
         'password',
+    ];
+
+    protected $casts = [
+        'work_graph' => 'json',
     ];
 
     public function wallet(): HasOne
@@ -32,5 +37,11 @@ class User extends Authenticatable
     public function magicLinks(): HasMany
     {
         return $this->hasMany(MagicLink::class);
+    }
+
+    public function recordEvent(string $type, array $payload): void
+    {
+        // Event recording for audit trail - can be extended later
+        // For now, this is a placeholder for future event sourcing
     }
 }

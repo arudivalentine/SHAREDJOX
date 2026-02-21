@@ -6,6 +6,7 @@ use App\Domains\Jobs\Models\Job;
 use App\Domains\Jobs\DTOs\JobDTO;
 use App\Models\User;
 use App\Events\JobPostedEvent;
+use Illuminate\Support\Facades\DB;
 
 class PostJobAction
 {
@@ -32,29 +33,60 @@ class PostJobAction
             throw new \DomainException('Title and description are required');
         }
 
-        $job = Job::create([
-            'client_id' => $client->id,
-            'title' => $title,
-            'description' => $description,
-            'type' => $type,
-            'budget_min' => $budgetMin,
-            'budget_max' => $budgetMax,
-            'status' => 'active',
-            'required_skills' => $requiredSkills,
-            'estimated_duration' => $estimatedDuration,
-            'deliverables_required' => $deliverablesRequired,
-        ]);
+        $platformFee = $budgetMax * 0.10;
+        $totalHold = $budgetMax + $platformFee;
 
-        $client->recordEvent('job_posted', [
-            'job_id' => $job->id,
-            'title' => $title,
-            'budget_min' => $budgetMin,
-            'budget_max' => $budgetMax,
-            'type' => $type,
-        ]);
+        if ($client->wallet->available_balance < $totalHold) {
+            throw new \DomainException('Insufficient balance to post this job. Required: $' . number_format($totalHold, 2));
+        }
 
-        JobPostedEvent::dispatch($job, 50);
+        return DB::transaction(function () use (
+            $client,
+            $title,
+            $description,
+            $budgetMin,
+            $budgetMax,
+            $type,
+            $estimatedDuration,
+            $requiredSkills,
+            $deliverablesRequired,
+            $totalHold,
+        ) {
+            $escrowTransaction = $client->wallet->holdEscrow(
+                $totalHold,
+                "job_escrow_{$budgetMax}",
+                [
+                    'type' => 'job_posting',
+                    'budget' => $budgetMax,
+                ]
+            );
 
-        return JobDTO::fromModel($job);
+            $job = Job::create([
+                'client_id' => $client->id,
+                'title' => $title,
+                'description' => $description,
+                'type' => $type,
+                'budget_min' => $budgetMin,
+                'budget_max' => $budgetMax,
+                'status' => 'active',
+                'required_skills' => $requiredSkills,
+                'estimated_duration' => $estimatedDuration,
+                'deliverables_required' => $deliverablesRequired,
+                'escrow_transaction_id' => $escrowTransaction->id,
+            ]);
+
+            $client->recordEvent('job_posted', [
+                'job_id' => $job->id,
+                'title' => $title,
+                'budget_min' => $budgetMin,
+                'budget_max' => $budgetMax,
+                'type' => $type,
+                'escrow_amount' => $totalHold,
+            ]);
+
+            JobPostedEvent::dispatch($job, 50);
+
+            return JobDTO::fromModel($job);
+        });
     }
 }

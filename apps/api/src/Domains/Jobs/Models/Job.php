@@ -23,6 +23,10 @@ class Job extends Model
         'claimed_by',
         'claimed_at',
         'deliverables_required',
+        'deliverables',
+        'delivered_at',
+        'completed_at',
+        'escrow_transaction_id',
     ];
 
     protected $casts = [
@@ -30,7 +34,10 @@ class Job extends Model
         'budget_max' => 'decimal:2',
         'required_skills' => 'json',
         'deliverables_required' => 'json',
+        'deliverables' => 'json',
         'claimed_at' => 'datetime',
+        'delivered_at' => 'datetime',
+        'completed_at' => 'datetime',
     ];
 
     public function client(): BelongsTo
@@ -61,5 +68,26 @@ class Job extends Model
     public function canBeClaimed(): bool
     {
         return $this->status === 'active' && !$this->claimed_by;
+    }
+
+    public function isPendingReview(): bool
+    {
+        return $this->status === 'pending_review';
+    }
+
+    public function isWithinDeadline(): bool
+    {
+        if (!$this->claimed_at) {
+            return true;
+        }
+
+        $deadline = match ($this->type) {
+            'flash' => 2,
+            'sprint' => 24,
+            'anchor' => 72,
+            default => 2,
+        };
+
+        return $this->claimed_at->addHours($deadline)->isFuture();
     }
 }

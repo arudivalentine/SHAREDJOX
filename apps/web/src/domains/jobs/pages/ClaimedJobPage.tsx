@@ -5,6 +5,7 @@ import { useGetDiscoveryFeed } from '../../../system/api/jobsApi';
 import { useWebSocket } from '../../../system/hooks/useWebSocket';
 import { JobDTO } from '../../../system/api/jobsApi';
 import { showToast } from '../../../system/components/Toast';
+import { apiClient } from '../../../system/api/apiClient';
 
 export function ClaimedJobPage() {
   const { id } = useParams<{ id: string }>();
@@ -91,13 +92,23 @@ export function ClaimedJobPage() {
       deliverables.forEach((file) => {
         formData.append('files[]', file);
       });
-      formData.append('notes', notes);
+      if (notes.trim()) {
+        formData.append('notes', notes);
+      }
+
+      const response = await apiClient.post(`/api/jobs/${id}/deliver`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
       showToast('Deliverables submitted!', 'success');
+      setJob(response.data.data);
       setDeliverables([]);
       setNotes('');
-    } catch (err) {
-      showToast('Failed to submit deliverables', 'error');
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Failed to submit deliverables';
+      showToast(message, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -116,6 +127,9 @@ export function ClaimedJobPage() {
       </div>
     );
   }
+
+  const isDelivered = job.status === 'pending_review';
+  const isCompleted = job.status === 'completed';
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
@@ -182,7 +196,7 @@ export function ClaimedJobPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.2 }}
           className="rounded-lg backdrop-blur-xl p-6"
           style={{
             backgroundColor: 'rgba(26, 26, 46, 0.5)',
@@ -213,94 +227,173 @@ export function ClaimedJobPage() {
           </div>
         </motion.div>
 
+        {isDelivered && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="rounded-lg backdrop-blur-xl p-6"
+            style={{
+              backgroundColor: 'rgba(26, 26, 46, 0.5)',
+              border: '1px solid rgba(167, 139, 250, 0.3)',
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="w-3 h-3 bg-violet-500 rounded-full"
+              />
+              <div>
+                <p className="text-sm text-gray-400">Status</p>
+                <p className="text-lg font-bold text-violet-400">Awaiting Client Review</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {isCompleted && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="rounded-lg backdrop-blur-xl p-6"
+            style={{
+              backgroundColor: 'rgba(26, 26, 46, 0.5)',
+              border: '1px solid rgba(34, 197, 94, 0.3)',
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-green-500 rounded-full" />
+              <div>
+                <p className="text-sm text-gray-400">Status</p>
+                <p className="text-lg font-bold text-green-400">Completed - Payment Released</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.3 }}
           className="rounded-lg backdrop-blur-xl p-6"
           style={{
             backgroundColor: 'rgba(26, 26, 46, 0.5)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
-          <h2 className="text-xl font-bold text-white mb-4">Submit Deliverables</h2>
+          <h2 className="text-xl font-bold text-white mb-4">
+            {isDelivered ? 'Deliverables Submitted' : 'Submit Deliverables'}
+          </h2>
 
-          <div className="mb-6 p-6 border-2 border-dashed border-cyan-500/50 rounded-lg hover:border-cyan-500 transition-colors cursor-pointer bg-cyan-500/5">
-            <input
-              type="file"
-              multiple
-              onChange={handleFileChange}
-              className="hidden"
-              id="file-input"
-              accept="image/*,.pdf,.doc,.docx,.zip"
-            />
-            <label htmlFor="file-input" className="cursor-pointer block text-center">
-              <svg className="w-8 h-8 mx-auto mb-2 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              <p className="text-white font-semibold">Drop files here or click to upload</p>
-              <p className="text-sm text-gray-400">Max 5 files, 10MB each</p>
-            </label>
-          </div>
+          {!isDelivered && !isCompleted && (
+            <>
+              <div className="mb-6 p-6 border-2 border-dashed border-cyan-500/50 rounded-lg hover:border-cyan-500 transition-colors cursor-pointer bg-cyan-500/5">
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="file-input"
+                  accept="image/*,.pdf,.doc,.docx,.zip"
+                />
+                <label htmlFor="file-input" className="cursor-pointer block text-center">
+                  <svg className="w-8 h-8 mx-auto mb-2 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <p className="text-white font-semibold">Drop files here or click to upload</p>
+                  <p className="text-sm text-gray-400">Max 5 files, 10MB each</p>
+                </label>
+              </div>
 
-          {deliverables.length > 0 && (
-            <div className="mb-6 space-y-2">
-              {deliverables.map((file, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10"
+              {deliverables.length > 0 && (
+                <div className="mb-6 space-y-2">
+                  {deliverables.map((file, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10"
+                    >
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                          <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
+                        </svg>
+                        <span className="text-sm text-white truncate">{file.name}</span>
+                      </div>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleRemoveFile(index)}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        ✕
+                      </motion.button>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-white mb-2">Notes (optional)</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add any notes about your deliverables..."
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 resize-none"
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="flex-1 px-6 py-3 rounded-lg bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 font-semibold hover:bg-cyan-500/30 disabled:opacity-50 transition-colors"
                 >
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-                      <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1v-5a1 1 0 00-.293-.707l-2-2A1 1 0 0015 7h-1z" />
-                    </svg>
-                    <span className="text-sm text-white truncate">{file.name}</span>
-                  </div>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleRemoveFile(index)}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    ✕
-                  </motion.button>
-                </motion.div>
-              ))}
+                  {isSubmitting ? 'Submitting...' : 'Submit Deliverables'}
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-6 py-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-300 font-semibold hover:bg-red-500/30 transition-colors"
+                >
+                  Cancel Job
+                </motion.button>
+              </div>
+            </>
+          )}
+
+          {isDelivered && !isCompleted && (
+            <div className="text-center py-6">
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="text-4xl mb-3"
+              >
+                ✓
+              </motion.div>
+              <p className="text-gray-300 mb-2">Your deliverables have been submitted</p>
+              <p className="text-sm text-gray-500">Waiting for client approval...</p>
             </div>
           )}
 
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-white mb-2">Notes (optional)</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add any notes about your deliverables..."
-              className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50 resize-none"
-              rows={4}
-            />
-          </div>
-
-          <div className="flex gap-3">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="flex-1 px-6 py-3 rounded-lg bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 font-semibold hover:bg-cyan-500/30 disabled:opacity-50 transition-colors"
-            >
-              {isSubmitting ? 'Submitting...' : 'Submit Deliverables'}
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-6 py-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-300 font-semibold hover:bg-red-500/30 transition-colors"
-            >
-              Cancel Job
-            </motion.button>
-          </div>
+          {isCompleted && (
+            <div className="text-center py-6">
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <div className="text-4xl mb-3">🎉</div>
+              </motion.div>
+              <p className="text-gray-300 mb-2">Job completed!</p>
+              <p className="text-lg font-bold text-green-400">Payment released to your wallet</p>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

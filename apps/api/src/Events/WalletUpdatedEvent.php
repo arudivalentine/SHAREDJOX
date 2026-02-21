@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\User;
+use App\Domains\Wallet\Models\Wallet;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -14,18 +15,18 @@ class WalletUpdatedEvent implements ShouldBroadcast
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public int $userId;
-    public float $newBalance;
+    public float $balance;
     public float $availableBalance;
-    public string $transactionType;
-    public float $amount;
+    public float $heldBalance;
+    public string $updatedAt;
 
-    public function __construct(User $user, string $transactionType, float $amount)
+    public function __construct(User $user, Wallet $wallet)
     {
         $this->userId = $user->id;
-        $this->newBalance = (float) $user->wallet->balance;
-        $this->availableBalance = (float) $user->wallet->available_balance;
-        $this->transactionType = $transactionType;
-        $this->amount = $amount;
+        $this->balance = (float) $wallet->balance;
+        $this->availableBalance = (float) $wallet->available_balance;
+        $this->heldBalance = (float) $wallet->held_balance;
+        $this->updatedAt = $wallet->updated_at->toIso8601String();
     }
 
     public function broadcastOn(): PrivateChannel
@@ -42,10 +43,10 @@ class WalletUpdatedEvent implements ShouldBroadcast
     {
         return [
             'userId' => $this->userId,
-            'newBalance' => $this->newBalance,
+            'balance' => $this->balance,
             'availableBalance' => $this->availableBalance,
-            'transactionType' => $this->transactionType,
-            'amount' => $this->amount,
+            'heldBalance' => $this->heldBalance,
+            'updatedAt' => $this->updatedAt,
             'timestamp' => now()->toIso8601String(),
         ];
     }

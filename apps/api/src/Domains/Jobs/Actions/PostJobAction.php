@@ -5,6 +5,7 @@ namespace App\Domains\Jobs\Actions;
 use App\Domains\Jobs\Models\Job;
 use App\Domains\Jobs\DTOs\JobDTO;
 use App\Models\User;
+use App\Events\JobPostedEvent;
 
 class PostJobAction
 {
@@ -51,6 +52,8 @@ class PostJobAction
             'budget_max' => $budgetMax,
             'type' => $type,
         ]);
+
+        JobPostedEvent::dispatch($job, 50);
 
         return JobDTO::fromModel($job);
     }

@@ -5,6 +5,7 @@ namespace App\Domains\Jobs\Actions;
 use App\Domains\Jobs\Models\Job;
 use App\Domains\Jobs\DTOs\JobDTO;
 use App\Models\User;
+use App\Events\JobClaimedEvent;
 use Illuminate\Support\Facades\DB;
 
 class ClaimJobAction
@@ -34,6 +35,8 @@ class ClaimJobAction
                 'claimed_at' => now()->toIso8601String(),
                 'match_score' => $matchScore,
             ]);
+
+            JobClaimedEvent::dispatch($job, $matchScore);
         });
 
         return JobDTO::fromModel($job->fresh(), $matchScore);

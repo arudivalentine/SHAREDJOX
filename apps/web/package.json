@@ -16,7 +16,9 @@
     "zustand": "^4.4.0",
     "framer-motion": "^10.16.0",
     "@tanstack/react-query": "^5.28.0",
-    "axios": "^1.6.0"
+    "axios": "^1.6.0",
+    "laravel-echo": "^1.15.0",
+    "pusher-js": "^8.4.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",

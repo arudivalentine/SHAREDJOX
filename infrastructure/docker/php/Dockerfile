@@ -1,28 +1,33 @@
 FROM php:8.3-fpm-alpine
 
+WORKDIR /var/www/api
+
 RUN apk add --no-cache \
     postgresql-dev \
     redis \
+    pcntl \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    libzip-dev \
+    icu-dev \
     git \
     curl \
-    zip \
     unzip \
-    libzip-dev \
-    oniguruma-dev
-
-RUN docker-php-ext-install \
-    pdo \
+    && docker-php-ext-configure gd --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
     pdo_pgsql \
-    redis \
+    gd \
     zip \
-    mbstring \
-    opcache
+    intl \
+    pcntl
 
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN pecl install redis && docker-php-ext-enable redis
 
-COPY php.ini /usr/local/etc/php/conf.d/custom.ini
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www/api
+RUN apk add --no-cache nodejs npm
+
+RUN mkdir -p /var/www/api && chown -R www-data:www-data /var/www/api
 
 EXPOSE 9000
 

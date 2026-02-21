@@ -1,9 +1,11 @@
 FROM node:20-alpine
 
-RUN apk add --no-cache git
-
 WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm ci
 
 EXPOSE 5173
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev", "--", "--host"]

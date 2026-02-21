@@ -1,0 +1,189 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: php/Dockerfile
+    container_name: sharedjox-app
+    working_dir: /var/www/api
+    volumes:
+      - ../../apps/api:/var/www/api
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_URL=http://localhost
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=sharedjox
+      - DB_USERNAME=sharedjox
+      - DB_PASSWORD=sharedjox_dev
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - SESSION_DRIVER=redis
+      - BROADCAST_DRIVER=reverb
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REVERB_HOST=0.0.0.0
+      - REVERB_PORT=8080
+      - REVERB_APP_KEY=sharedjox
+      - REVERB_APP_SECRET=sharedjox-secret
+      - MAIL_MAILER=log
+      - MAIL_FROM_ADDRESS=dev@sharedjox.local
+      - STRIPE_PUBLIC_KEY=pk_test_
+      - STRIPE_SECRET_KEY=sk_test_
+      - STRIPE_WEBHOOK_SECRET=whsec_test_
+      - OPENAI_API_KEY=
+      - VITE_API_URL=http://localhost
+      - VITE_WS_URL=ws://localhost:8080
+    networks:
+      - shared-network
+    depends_on:
+      - postgres
+      - redis
+    healthcheck:
+      test: ["CMD", "php-fpm", "-t"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: node/Dockerfile
+    container_name: sharedjox-web
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../../apps/web:/app
+    environment:
+      - VITE_API_URL=http://localhost/api
+      - VITE_WS_URL=ws://localhost:8080
+    networks:
+      - shared-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:alpine
+    container_name: sharedjox-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
+      - ../../apps/api:/var/www/api
+    networks:
+      - shared-network
+    depends_on:
+      - app
+      - web
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: sharedjox-postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=sharedjox
+      - POSTGRES_USER=sharedjox
+      - POSTGRES_PASSWORD=sharedjox_dev
+    networks:
+      - shared-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sharedjox"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: sharedjox-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - shared-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  reverb:
+    build:
+      context: .
+      dockerfile: php/Dockerfile
+    container_name: sharedjox-reverb
+    working_dir: /var/www/api
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../../apps/api:/var/www/api
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=sharedjox
+      - DB_USERNAME=sharedjox
+      - DB_PASSWORD=sharedjox_dev
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REVERB_HOST=0.0.0.0
+      - REVERB_PORT=8080
+      - REVERB_APP_KEY=sharedjox
+      - REVERB_APP_SECRET=sharedjox-secret
+    networks:
+      - shared-network
+    depends_on:
+      - redis
+      - postgres
+
+  horizon:
+    build:
+      context: .
+      dockerfile: php/Dockerfile
+    container_name: sharedjox-horizon
+    working_dir: /var/www/api
+    command: php artisan horizon
+    volumes:
+      - ../../apps/api:/var/www/api
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=sharedjox
+      - DB_USERNAME=sharedjox
+      - DB_PASSWORD=sharedjox_dev
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - QUEUE_CONNECTION=redis
+    networks:
+      - shared-network
+    depends_on:
+      - redis
+      - postgres
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  shared-network:
+    driver: bridge

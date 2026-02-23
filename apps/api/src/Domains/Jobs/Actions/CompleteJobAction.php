@@ -7,7 +7,9 @@ use App\Domains\Jobs\DTOs\JobDTO;
 use App\Models\User;
 use App\Events\JobUpdatedEvent;
 use App\Events\WalletUpdatedEvent;
+use App\Mail\PaymentReleasedMail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class CompleteJobAction
 {
@@ -84,6 +86,8 @@ class CompleteJobAction
 
             JobUpdatedEvent::dispatch($job);
             WalletUpdatedEvent::dispatch($freelancer, $freelancerWallet);
+
+            Mail::send(new PaymentReleasedMail($job, $freelancerEarning));
 
             return JobDTO::fromModel($job);
         });

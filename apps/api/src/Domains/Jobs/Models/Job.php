@@ -27,6 +27,7 @@ class Job extends Model
         'delivered_at',
         'completed_at',
         'escrow_transaction_id',
+        'revision_notes',
     ];
 
     protected $casts = [

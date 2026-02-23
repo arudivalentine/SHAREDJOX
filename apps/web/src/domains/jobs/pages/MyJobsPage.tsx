@@ -43,6 +43,13 @@ export function MyJobsPage() {
             <span className="text-sm text-cyan-400">In progress</span>
           </div>
         );
+      case 'pending_review':
+        return (
+          <div className="flex items-center gap-2">
+            <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 2, repeat: Infinity }} className="w-2 h-2 bg-yellow-500 rounded-full" />
+            <span className="text-sm text-yellow-400">Awaiting review</span>
+          </div>
+        );
       case 'completed':
         return (
           <div className="flex items-center gap-2">
@@ -123,6 +130,16 @@ export function MyJobsPage() {
                   <div>{getStatusBadge(job)}</div>
                   {job.status === 'claimed' && tab === 'posted' && (
                     <div className="text-sm text-gray-400">Claimed by freelancer</div>
+                  )}
+                  {job.status === 'pending_review' && tab === 'posted' && (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => window.location.href = `/review/${job.id}`}
+                      className="px-4 py-2 rounded-lg bg-yellow-500/20 border border-yellow-500/50 text-yellow-300 text-sm font-semibold hover:bg-yellow-500/30 transition-colors"
+                    >
+                      Review Deliverable
+                    </motion.button>
                   )}
                   {job.status === 'claimed' && tab === 'claimed' && (
                     <motion.button

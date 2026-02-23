@@ -8,6 +8,7 @@ use App\Domains\Jobs\Controllers\ClaimJobController;
 use App\Domains\Jobs\Controllers\SubmitDeliverableController;
 use App\Domains\Jobs\Controllers\CompleteJobController;
 use App\Domains\Jobs\Controllers\CancelJobController;
+use App\Domains\Jobs\Controllers\RequestChangesController;
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/jobs', PostJobController::class);
@@ -17,4 +18,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/jobs/{job}/deliver', SubmitDeliverableController::class);
     Route::post('/jobs/{job}/complete', CompleteJobController::class);
     Route::post('/jobs/{job}/cancel', CancelJobController::class);
+    Route::post('/jobs/{job}/request-changes', RequestChangesController::class);
 });

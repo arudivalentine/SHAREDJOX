@@ -9,12 +9,14 @@ export interface JobDTO {
   type: 'flash' | 'sprint' | 'anchor';
   budgetMin: number;
   budgetMax: number;
-  status: 'draft' | 'active' | 'claimed' | 'completed' | 'cancelled';
+  status: 'draft' | 'active' | 'claimed' | 'pending_review' | 'completed' | 'cancelled';
   requiredSkills?: string[];
   estimatedDuration?: number;
   claimedBy?: number;
   claimedAt?: string;
   deliverablesRequired?: string[];
+  deliverables?: any[];
+  revisionNotes?: string;
   createdAt: string;
   updatedAt: string;
   matchScore?: number;
@@ -84,6 +86,18 @@ export async function postJob(payload: CreateJobPayload) {
 export async function getMyJobs(type: 'posted' | 'claimed' = 'posted', status?: string) {
   const response = await apiClient.get<{ data: JobDTO[] }>('/api/jobs/my', {
     params: { type, status },
+  });
+  return response.data.data;
+}
+
+export async function completeJob(jobId: number) {
+  const response = await apiClient.post<{ data: JobDTO }>(`/api/jobs/${jobId}/complete`);
+  return response.data.data;
+}
+
+export async function requestChanges(jobId: number, feedback: string) {
+  const response = await apiClient.post<{ data: JobDTO }>(`/api/jobs/${jobId}/request-changes`, {
+    feedback,
   });
   return response.data.data;
 }

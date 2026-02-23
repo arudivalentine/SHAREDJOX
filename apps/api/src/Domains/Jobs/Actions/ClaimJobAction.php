@@ -6,7 +6,9 @@ use App\Domains\Jobs\Models\Job;
 use App\Domains\Jobs\DTOs\JobDTO;
 use App\Models\User;
 use App\Events\JobClaimedEvent;
+use App\Mail\JobClaimedMail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class ClaimJobAction
 {
@@ -38,6 +40,8 @@ class ClaimJobAction
 
             JobClaimedEvent::dispatch($job, $matchScore);
         });
+
+        Mail::send(new JobClaimedMail($job, $freelancer->name));
 
         return JobDTO::fromModel($job->fresh(), $matchScore);
     }

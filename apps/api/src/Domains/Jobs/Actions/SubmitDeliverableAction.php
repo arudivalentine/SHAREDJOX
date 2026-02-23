@@ -6,8 +6,10 @@ use App\Domains\Jobs\Models\Job;
 use App\Domains\Jobs\DTOs\JobDTO;
 use App\Models\User;
 use App\Events\JobUpdatedEvent;
+use App\Mail\DeliverableSubmittedMail;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
 
 class SubmitDeliverableAction
 {
@@ -88,6 +90,8 @@ class SubmitDeliverableAction
         ]);
 
         JobUpdatedEvent::dispatch($job);
+
+        Mail::send(new DeliverableSubmittedMail($job, $freelancer->name));
 
         return JobDTO::fromModel($job);
     }
